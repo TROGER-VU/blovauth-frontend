@@ -3,26 +3,71 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Key, FileText, Cpu, Network, ArrowRight, CheckCircle2 } from "lucide-react";
-import { generateDID, generateVC } from "@/lib/mockService";
+import axios from "axios";
 import Link from "next/link";
+
+const API = process.env.NEXT_PUBLIC_API;
+
+const short = (str) => {
+  if (!str) return "";
+  return str.slice(0, 6) + "..." + str.slice(-6);
+};
+
+const generateHash = async (did) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(did);
+
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+};
 
 export default function VehiclePage() {
   const [did, setDid] = useState("");
   const [vc, setVc] = useState(null);
   const [hash, setHash] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [tx, setTx] = useState("");
+  const [vehicleAddress, setVehicleAddress] = useState("");
+  const [explorerTx, setExplorerTx] = useState("");
+  const [explorerAccount, setExplorerAccount] = useState("");
 
   useEffect(() => {
     const rafId = window.requestAnimationFrame(() => setMounted(true));
     return () => window.cancelAnimationFrame(rafId);
   }, []);
 
-  const handleDID = () => setDid(generateDID());
-  
-  const handleVC = () => {
-    const { vc, hash } = generateVC(did);
-    setVc(vc);
-    setHash(hash);
+  const handleDID = () => {
+      const random = Math.random().toString(16).slice(2);
+      setDid("vehicle-" + random);
+    };
+    
+    const handleRegister = async () => {
+    try {
+      const generatedHash = await generateHash(did);
+
+      const res = await axios.post(`${API}/register`, {
+        did,
+        hash: generatedHash,
+      });
+
+      setHash(generatedHash);
+
+      setTx(res.data.tx);
+      setVehicleAddress(res.data.vehicleAddress);
+      setExplorerTx(res.data.explorerTx);
+      setExplorerAccount(res.data.explorerAccount);
+
+      localStorage.setItem("vehicle_did", did);
+      localStorage.setItem("vehicle_hash", generatedHash);
+
+      console.log("PDA:", res.data.vehicleAddress);
+      console.log("HASH:", generatedHash);
+
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -106,7 +151,7 @@ export default function VehiclePage() {
 
             <button 
               disabled={!did}
-              onClick={handleVC}
+              onClick={handleRegister}
               className="w-full py-4 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-blue-600 disabled:bg-slate-100 disabled:text-slate-300 transition-all active:scale-95 shadow-xl shadow-slate-200"
             >
               Request VC
@@ -159,11 +204,62 @@ export default function VehiclePage() {
             </div>
 
             {hash && (
-              
-                <Link href="/rsu" className="mt-8 w-full flex items-center justify-center gap-2 text-blue-600 text-xs font-bold hover:gap-4 transition-all group">
-                  Proceed to RSU Authentication <ArrowRight size={14} />
-                </Link>
-            )}
+            <div className="mt-6 space-y-4">
+
+              {/* 🔥 BLOCKCHAIN PROOF CARD */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700 shadow-xl">
+                
+                <p className="text-[10px] uppercase tracking-widest text-blue-400 mb-4 font-bold">
+                  Blockchain Proof
+                </p>
+
+                {/* PDA (shortened) */}
+                <div className="mb-3">
+                  <p className="text-[10px] text-slate-400">Vehicle Account</p>
+                  <p className="text-[11px] font-mono text-blue-300">
+                    {short(vehicleAddress)}
+                  </p>
+                </div>
+
+                {/* TX (shortened) */}
+                <div className="mb-4">
+                  <p className="text-[10px] text-slate-400">Transaction</p>
+                  <p className="text-[11px] font-mono text-emerald-400">
+                    {short(tx)}
+                  </p>
+                </div>
+
+                {/* 🔥 CLICKABLE BUTTONS */}
+                <div className="flex gap-3 mt-3">
+
+                  <button
+                    onClick={() => window.open(explorerTx, "_blank")}
+                    className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 active:scale-95 text-[11px] font-bold transition"
+                  >
+                    View Transaction
+                  </button>
+
+                  <button
+                    onClick={() => window.open(explorerAccount, "_blank")}
+                    className="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-[11px] font-bold transition"
+                  >
+                    View Account
+                  </button>
+
+                </div>
+
+              </div>
+
+              {/* NAV */}
+              <Link
+                href="/rsu"
+                className="mt-4 w-full flex items-center justify-center gap-2 text-blue-600 text-xs font-bold hover:gap-4 transition-all group"
+              >
+                Proceed to RSU Authentication <ArrowRight size={14} />
+              </Link>
+
+            </div>
+          )}
           </motion.div>
 
         </div>

@@ -105,7 +105,7 @@ const Footer = () => {
 
         <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            © 26_CS_01_PRJ
+            © 26_CS_4A_01 PSIT KANPUR
           </p>
           <div className="flex gap-6">
             <span className="text-[10px] font-mono font-bold text-blue-600/50 uppercase">Next.js + Tailwind</span>

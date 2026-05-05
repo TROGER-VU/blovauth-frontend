@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert, ShieldCheck, Zap, Database, Search, Terminal as TerminalIcon, Radio, RefreshCw, Cpu } from "lucide-react";
-import { verifyVC } from "@/lib/mockService";
+import axios from "axios";
+
+const API = process.env.NEXT_PUBLIC_API;
 
 
 export default function RSUPage() {
@@ -15,23 +17,27 @@ export default function RSUPage() {
 
   useEffect(() => setMounted(true), []);
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!vcInput.trim()) return;
-    
+
     setIsScanning(true);
     setStatus("IDLE");
 
-    setTimeout(() => {
-      try {
-        const vc = JSON.parse(vcInput);
-        const isValid = verifyVC(vc, hash);
-        setStatus(isValid ? "AUTHORIZED" : "REJECTED");
-      } catch (err) {
-        setStatus("REJECTED");
-      } finally {
-        setIsScanning(false);
-      }
-    }, 1000);
+    try {
+      const parsed = JSON.parse(vcInput);
+
+      const res = await axios.post(`${API}/verify`, {
+        did: parsed.did,
+        hash: hash,
+      });
+
+      setStatus(res.data.status);
+    } catch (err) {
+      console.error(err);
+      setStatus("REJECTED");
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   return (
